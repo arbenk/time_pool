@@ -348,9 +348,25 @@
     let currentAdjustMethod = 'add';
 
     document.addEventListener('DOMContentLoaded', () => {
+        // 1. 初始化主题 (读取本地存储)
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.body.classList.remove('dark-mode');
+        } else {
+            // 默认为暗色 (对应 body class="dark-mode")
+            document.body.classList.add('dark-mode');
+        }
+
+        // 2. 启动应用
         fetchProjects();
         setInterval(updateDisplayTimes, 1000);
     });
+
+    // 切换主题并保存
+    function toggleTheme() {
+        const isDark = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
 
     function switchView(view) {
         currentView = view;
@@ -605,7 +621,7 @@
         document.getElementById('view-history').style.display = 'block';
         
         document.getElementById('fullHistoryProjectId').value = id;
-        document.getElementById('historyPageTitle').innerText = `${projectName}`;
+        document.getElementById('historyPageTitle').innerText = `历史记录：${projectName}`;
         document.getElementById('fullHistoryList').innerHTML = '<div style="text-align:center; padding:20px;">加载中...</div>';
 
         window.scrollTo(0, 0);
@@ -626,7 +642,6 @@
         document.getElementById('view-main').style.display = 'block';
     }
 
-// --- 渲染历史列表 (已更新还原功能) ---
     function renderHistoryList(logs) {
         const container = document.getElementById('fullHistoryList');
         container.innerHTML = '';
@@ -636,39 +651,35 @@
             return;
         }
 
-        // 获取最新的一条记录ID，用于判断是否是“当前状态”
         const latestLogId = logs.length > 0 ? logs[0].id : 0;
 
         logs.forEach(log => {
             const div = document.createElement('div');
             div.className = 'history-item';
             
-            // 是否有快照数据 (旧数据没有snapshot字段，或者为null)
-            // 注意：API 返回的 snapshot_used 可能是字符串或数字，需要判断非 null
             const hasSnapshot = (log.snapshot_used !== null && log.snapshot_used !== undefined);
             
-            let leftContent = '';
-            let rightContent = '';
-            
-            // 生成还原按钮 (如果是最新一条，不需要还原)
-            // 只有在 active 视图下才允许还原，回收站里禁止修改数据
             let restoreBtn = '';
             if (hasSnapshot && log.id != latestLogId && currentView === 'active') {
                 restoreBtn = `
-                    <button class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px; margin-top: 5px; border-color: var(--accent-red); color: var(--accent-red);" 
+                    <button class="btn btn-outline" 
+                        style="font-size: 0.75rem; padding: 4px 10px; margin-top: 8px; border: 1px solid var(--accent-red); color: var(--accent-red); background: transparent; cursor: pointer; border-radius: 4px;" 
                         onclick="rollbackLog(${log.id}, ${log.project_id})">
                         ⏪ 还原到此处
                     </button>
                 `;
             }
 
+            let leftContent = '';
+            let rightContent = '';
+            
             if (log.action_type === 'stop') {
                 try {
                     const data = JSON.parse(log.message);
                     const displayTitle = data.remark ? data.remark : '完成计时';
 
                     leftContent = `
-                        <div class="history-main" style="max-width: 60%;">
+                        <div class="history-main" style="max-width: 65%;">
                             <span class="history-action" style="font-size:1.05rem;">${getLogIcon(log.action_type)} ${displayTitle}</span>
                             <span class="history-date">${log.created_at}</span>
                             ${restoreBtn}
@@ -678,7 +689,7 @@
                     rightContent = `
                         <div class="history-details">
                             <div class="time-tag">
-                            <span style="color:var(--accent-green); font-weight:bold; font-size:1.1rem;">${data.duration}</span>
+                                <span style="color:var(--secondary-text)">时长:</span> <span style="color:var(--accent-green); font-weight:bold; font-size:1.1rem;">${data.duration}</span>
                             </div>
                             <div class="time-tag"><span>结束:</span> <span style="color:var(--accent-grey)">${data.end.split(' ')[1]}</span></div>
                             <div class="time-tag"><span>开始:</span> <span style="color:var(--accent-grey)">${data.start.split(' ')[1]}</span></div>
@@ -705,7 +716,6 @@
 
             div.innerHTML = leftContent + rightContent;
             
-            // 样式着色
             if(log.action_type === 'stop') div.style.borderLeftColor = 'var(--accent-green)';
             if(log.action_type === 'modify_pool') div.style.borderLeftColor = 'var(--accent-yellow)';
             if(log.action_type === 'create') div.style.borderLeftColor = 'var(--accent-blue)';
@@ -716,7 +726,6 @@
         });
     }
 
-    // --- 新增：执行时光倒流 ---
     async function rollbackLog(logId, projectId) {
         if (!confirm('⚠️ 警告：确定要“时光倒流”到这个节点吗？\n\n1. 项目时间将完全恢复到记录时的状态。\n2. 此节点之后的所有历史记录将被永久删除！\n3. 如果项目正在计时，将强制停止。')) {
             return;
@@ -731,13 +740,13 @@
         const result = await res.json();
 
         if (result.status === 'success') {
-            // 刷新当前历史页面
             const name = document.getElementById('historyPageTitle').innerText.replace('历史记录：', '');
             openHistoryPage(projectId, name);
         } else {
             alert(result.msg || '还原失败');
         }
     }
+
     async function clearHistoryFromPage() {
         if(!confirm('确定清空该项目的所有历史记录？此操作不可恢复。')) return;
         const id = document.getElementById('fullHistoryProjectId').value;
@@ -856,7 +865,6 @@
     }
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
     function formatTime(totalSeconds) {
         const h = Math.floor(totalSeconds / 3600);
         const m = Math.floor((totalSeconds % 3600) / 60);
@@ -865,4 +873,5 @@
     }
 </script>
 </body>
+
 </html>
