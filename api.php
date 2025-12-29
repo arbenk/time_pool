@@ -1,11 +1,13 @@
 <?php
+if (file_exists(__DIR__ . '/config_local.php')) {
+    require_once __DIR__ . '/config_local.php';
+} else {
+    // 无本地配置时，仅提示，不中断程序（云端环境友好）
+    exit('【提示】请复制 config_local.php.example 并重命名为 config_local.php，填写真实服务器账号密码！');
+}
 // 1. 设置时区
 date_default_timezone_set('Asia/Shanghai');
-$host = 'localhost';
-$db   = 'timedatabase';   // 需要建立一个数据库，然后修改这个名称
-$user = 'username';          // 需要修改数据库账号
-$pass = 'password';        // 需要修改数据库密码
-$charset = 'utf8mb4';
+
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
