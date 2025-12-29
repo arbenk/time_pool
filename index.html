@@ -201,7 +201,7 @@
             flex-direction: column;
             gap: 5px;
         }
-        .history-action { font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 5px;}
+        .history-action { font-weight: 400; color: var(--text-color); display: flex; align-items: center; gap: 5px;}
         .history-date { font-size: 0.8rem; color: var(--secondary-text); }
 
         .history-details {
@@ -437,7 +437,7 @@
                 actionButtons = `
                     <div class="btn-group">
                         <button class="btn ${p.is_running == 1 ? 'btn-green' : 'btn-red'} btn-full" onclick="toggleTimer(${p.id}, ${p.is_running})">
-                            ${p.is_running == 1 ? '进行中...' : '已暂停 ▶'}
+                            ${p.is_running == 1 ? '进行中...' : '已暂停'}
                         </button>
                         <button class="btn btn-blue btn-full" onclick="openAdjustModal(${p.id}, 'used')">修改已用</button>
                         <button class="btn btn-purple btn-full" onclick="openAdjustModal(${p.id}, 'pool')">修改池</button>
@@ -734,7 +734,7 @@
             // 只有当左右两边都有数据时，才显示中间的分割线
             let dividerHtml = '';
             if (snapshotHtml && sessionHtml) {
-                dividerHtml = `<div style="width: 1px; height: 50px; background: var(--border-color); margin: 0 15px;"></div>`;
+                dividerHtml = `<div style="width: 50px; height: 1px; background: var(--border-color); margin: 0 15px;"></div>`;
             }
             // --- 4. 生成还原按钮 ---
             // 生成还原按钮 (如果是最新一条，不需要还原)
@@ -743,7 +743,7 @@
             if (hasSnapshot && log.id != latestLogId && currentView === 'active') {
                 restoreBtn = `
                     <button class="btn btn-outline" 
-                        style="font-size: 0.75rem; padding: 4px 10px; margin-top: 8px; border: 1px solid var(--accent-red); color: var(--accent-red); background: transparent; cursor: pointer; border-radius: 4px;" 
+                        style="width: 130px; font-size: 0.75rem; padding: 4px 10px; margin-top: 8px; border: 1px solid var(--accent-red); color: var(--accent-red); background: transparent; cursor: pointer; border-radius: 4px;" 
                         onclick="rollbackLog(${log.id}, ${log.project_id})">
                         ⏪ 还原到此处
                     </button>
@@ -754,8 +754,9 @@
             
             // 左侧主要信息区 (标题、时间、还原按钮)
             let leftContent = `
-                <div class="history-main" style="max-width: 40%;">
-                    <div class="history-action" style="font-size:1.05rem;">${icon} ${displayTitle}</div>
+                <div class="history-main" style="max-width: 55%;">
+                    <div class="history-action" style="font-size:1rem;">${icon}</div>
+                    <div class="history-action" style="font-size:0.9rem;">${displayTitle}</div>
                     <div class="history-date">${log.created_at}</div>
                     ${restoreBtn}
                 </div>
@@ -763,10 +764,10 @@
             
             // 右侧详情区 (使用 flex-row 让它们左右排列)
             let rightContent = `
-                <div class="history-details" style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end;">
-                    ${sessionHtml}
-                    ${dividerHtml}
+                <div class="history-details" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
                     ${snapshotHtml}
+                    ${dividerHtml}
+                    ${sessionHtml}
                 </div>
             `;
 
