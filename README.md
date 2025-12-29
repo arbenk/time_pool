@@ -1,7 +1,7 @@
 # time_pool
 this is simple timer for record used time form time pool, used html+php+js+mysql，can put it on the cheap web site for remine my I should fix the poject when I wiset time.
 # 说明
-重要说明：这是一个通过谷歌gemini协助下生成的一个网页应用，由于我不是很会写代码，整个应用对我来说就像是黑箱一般无法理解。当前仓库只作为备份使用，不会进行修改或再次开发。
+重要说明：这是一个通过谷歌gemini协助下生成的一个网页应用，由于我不是很会写代码，整个应用对我来说就像是黑箱一般无法理解。
 
 这个网页是一个计时器，可以建立很多的小卡片记录每个项目的预计时间和消耗的时间，整个项目需要用到php、js、mysql，也就是一个带有数据库的云服务器，这真的很便宜。
 # 使用说明
