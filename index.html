@@ -59,7 +59,7 @@
             gap: 10px;
         }
 
-        h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(90deg, #a5b4fc, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(90deg, #a5b4fc, #c084fc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         
         .btn {
             padding: 8px 16px;
@@ -437,7 +437,7 @@
                 actionButtons = `
                     <div class="btn-group">
                         <button class="btn ${p.is_running == 1 ? 'btn-green' : 'btn-red'} btn-full" onclick="toggleTimer(${p.id}, ${p.is_running})">
-                            ${p.is_running == 1 ? '进行中...' : '暂停中'}
+                            ${p.is_running == 1 ? '进行中...' : '已暂停 ▶'}
                         </button>
                         <button class="btn btn-blue btn-full" onclick="openAdjustModal(${p.id}, 'used')">修改已用</button>
                         <button class="btn btn-purple btn-full" onclick="openAdjustModal(${p.id}, 'pool')">修改池</button>
