@@ -304,6 +304,7 @@
     }
 
 // --- 渲染历史列表 (已更新：左右分栏布局) ---
+// --- 渲染历史列表 (已更新：响应式分栏布局) ---
     function renderHistoryList(logs) {
         const container = document.getElementById('fullHistoryList');
         container.innerHTML = '';
@@ -319,77 +320,75 @@
             const div = document.createElement('div');
             div.className = 'history-item';
             
-            // --- 1. 准备快照数据 (左侧栏) ---
+            // --- 1. 准备数据模块 ---
+
+            // A. Snapshot 数据 (剩余/已用/总池)
             const hasSnapshot = (log.snapshot_used !== null && log.snapshot_used !== undefined);
             let snapshotHtml = '';
             
-            // 只有当有快照数据时才显示左栏
             if (hasSnapshot) {
                 const sUsed = parseInt(log.snapshot_used);
                 const sPool = parseInt(log.snapshot_pool);
                 const sRemain = sPool - sUsed;
                 
                 snapshotHtml = `
-                    <div style="display: flex; flex-direction: column; gap: 3px; text-align: right;">
+                    <div class="detail-group snapshot-group">
                         <div class="time-tag" title="当时的剩余时间">
-                            <span style="color:var(--secondary-text); font-size:0.8rem;">剩余</span> 
+                            <span>剩余</span> 
                             <span style=" color: ${sRemain < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
                                 ${sRemain < 0 ? '-' : ''}${formatTime(Math.abs(sRemain))}
                             </span>
                         </div>
                         <div class="time-tag" title="当时的已用时间">
-                            <span style="color:var(--secondary-text); font-size:0.8rem;">已用</span> 
+                            <span>已用</span> 
                             <span style="color:var(--accent-blue)">${formatTime(sUsed)}</span>
                         </div>
                         <div class="time-tag" title="当时的时间池">
-                            <span style="color:var(--secondary-text); font-size:0.8rem;">总池</span> 
+                            <span>总池</span> 
                             <span>${formatTime(sPool)}</span>
                         </div>
                     </div>
                 `;
             }
 
-            // --- 2. 准备本次会话数据 (右侧栏) ---
+            // B. Session 数据 (时长/结束/开始)
             let sessionHtml = '';
             let displayTitle = log.message;
             let icon = getLogIcon(log.action_type);
 
-            // 只有停止计时(stop)才有详细的开始/结束/时长
             if (log.action_type === 'stop') {
                 try {
                     const data = JSON.parse(log.message);
                     displayTitle = data.remark ? data.remark : '完成计时';
                     
                     sessionHtml = `
-                        <div style="display: flex; flex-direction: column; gap: 3px; text-align: right;">
+                        <div class="detail-group session-group">
                              <div class="time-tag">
-                                <span style="color:var(--secondary-text); font-size:0.8rem;"></span> 
+                                <span></span> 
                                 <span style="color:var(--accent-blue);">${data.duration}</span>
                             </div>
                             <div class="time-tag">
-                                <span style="color:var(--secondary-text); font-size:0.8rem;">🏁</span> 
+                                <span>🏁</span> 
                                 <span style="color:var(--accent-grey)">${data.end.split(' ')[1]}</span>
                             </div>
                             <div class="time-tag">
-                                <span style="color:var(--secondary-text); font-size:0.8rem;">▶️</span> 
+                                <span>▶️</span> 
                                 <span style="color:var(--accent-grey)">${data.start.split(' ')[1]}</span>
                             </div>
                         </div>
                     `;
                 } catch (e) {
-                    // 兼容旧数据或解析失败
+                    // 兼容旧数据
                 }
             }
 
-            // --- 3. 生成分割线 ---
-            // 只有当左右两边都有数据时，才显示中间的分割线
+            // C. 分割线 (只有两边都有数据时才显示)
             let dividerHtml = '';
             if (snapshotHtml && sessionHtml) {
-                dividerHtml = `<div style="width: 50px; height: 1px; background: var(--border-color); margin: 0 15px;"></div>`;
+                dividerHtml = `<div class="detail-divider"></div>`;
             }
-            // --- 4. 生成还原按钮 ---
-            // 生成还原按钮 (如果是最新一条，不需要还原)
-            // 只有在 active 视图下才允许还原，回收站里禁止修改数据
+
+            // --- 2. 生成还原按钮 ---
             let restoreBtn = '';
             if (hasSnapshot && log.id != latestLogId && currentView === 'active') {
                 restoreBtn = `
@@ -401,26 +400,35 @@
                 `;
             }
 
-            // --- 5. 组装 HTML ---
+            // --- 3. 组装最终 HTML ---
             
-            // 左侧主要信息区 (标题、时间、还原按钮)
+            // 左侧：标题与操作
+            // 注意：这里移除了内联的 max-width，交由 CSS 控制响应式宽度
             let leftContent = `
-                <div class="history-main" style="max-width: 55%;">
-                    <div class="history-action" style="font-size:1rem;">${icon}</div>
-                    <div class="history-action" style="font-size:0.9rem;">${displayTitle}</div>
+                <div class="history-main" style="max-width: 50%;">
+                    <div class="history-action" style="font-size:1.05rem;">${icon} ${displayTitle}</div>
                     <div class="history-date">${log.created_at}</div>
                     ${restoreBtn}
                 </div>
             `;
             
-            // 右侧详情区 (使用 flex-row 让它们左右排列)
-            let rightContent = `
-                <div class="history-details" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
-                    ${snapshotHtml}
-                    ${dividerHtml}
-                    ${sessionHtml}
-                </div>
-            `;
+            // 右侧：详情容器
+            // 顺序：Session -> Divider -> Snapshot
+            // 电脑(Row): [Session] | [Snapshot]
+            // 手机(Column-Reverse): 
+            //      [Snapshot] (上面)
+            //      --------
+            //      [Session]  (下面)
+            let rightContent = '';
+            if (sessionHtml || snapshotHtml) {
+                rightContent = `
+                    <div class="history-details">
+                        ${sessionHtml}
+                        ${dividerHtml}
+                        ${snapshotHtml}
+                    </div>
+                `;
+            }
 
             div.innerHTML = leftContent + rightContent;
             
@@ -434,6 +442,8 @@
             container.appendChild(div);
         });
     }
+
+    
     async function rollbackLog(logId, projectId) {
         if (!confirm('⚠️ 警告：确定要“时光倒流”到这个节点吗？\n\n1. 项目时间将完全恢复到记录时的状态。\n2. 此节点之后的所有历史记录将被永久删除！\n3. 如果项目正在计时，将强制停止。')) {
             return;
