@@ -405,7 +405,7 @@
             // 左侧：标题与操作
             // 注意：这里移除了内联的 max-width，交由 CSS 控制响应式宽度
             let leftContent = `
-                <div class="history-main" style="max-width: 50%;">
+                <div class="history-main">
                 
                      <div class="history-action" style="font-size:1.2rem;"> ${icon}</div>
                     <div class="history-action" style="font-size:0.9rem;"> ${displayTitle}</div>
