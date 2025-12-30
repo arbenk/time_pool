@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h2 class="project-name">${p.name}</h2>
                         <div class="project-desc">${p.description}</div>
                     </div>
-                    <span class="status-badge">${p.is_running == 1 ? 'Running...' : (currentView === 'recycle' ? '已删除' : 'Paused')}</span>
+                    <span class="status-badge" style="color: ${p.is_running == 1 ? 'var(--accent-green)' : (currentView === 'recycle' ? 'var(--secondary-text)' : 'var(--accent-red)')}">${p.is_running == 1 ? 'Running...' : (currentView === 'recycle' ? '已删除' : 'Paused')}</span>
                 </div>
                 <div class="time-rows">
                     <div class="time-row">
