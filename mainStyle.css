@@ -255,7 +255,7 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
 /* --- 精简模式 (Compact Mode) 样式 --- */
 .card.compact {
     padding: 5px 5px; /* 减小内边距 */
-    gap: 8px; /* 减小元素间距 */
+    gap: 0px; /* 减小元素间距 */
 }
 
 .card.compact .card-header {
@@ -264,7 +264,9 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
 }
 
 .card.compact .project-name {
-    font-size: 1.1rem; /* 稍微减小标题字号 */
+    font-size: .9rem; /* 稍微减小标题字号 */
+    font-weight: normal;
+    width: 80%;
 }
 
 /* 精简模式下的时间行容器 */
@@ -272,8 +274,7 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
     display: flex;
     justify-content: space-between;
     background: var(--card-bg-inner);
-    /* padding: 8px 15px; */
-        padding: 0px 0px;
+    padding: 0px 0px;
     border-radius: 8px;
     margin-top: 5px;
     gap: 2px;
@@ -299,8 +300,16 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
     color: var(--secondary-text);
 }
 .Foldedbtn{
-    padding:0px;
+    padding:10px 0px;
 }
+
+/* --- 右上角单次计时器样式 --- */
+.session-timer {
+    font-size: 0.9rem; 
+    color: var(--accent-green);
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.2); /* 加一点发光效果 */
+}
+
 /* --- 响应式布局：手机端 (宽度小于 600px) --- */
 @media (max-width: 600px) {
     .history-item {

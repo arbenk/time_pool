@@ -122,10 +122,15 @@ function renderProjects() {
     projectsData.forEach(p => {
         // 1. 计算时间数据
         let totalUsed = parseInt(p.used_time); 
+        // 新增：初始化本次运行时长
+        let currentSessionTime = 0; 
         if (p.is_running == 1) {
             const nowUnix = Math.floor(Date.now() / 1000);
             const diff = nowUnix - parseInt(p.last_start_time);
-            totalUsed += (diff > 0 ? diff : 0);
+            // totalUsed += (diff > 0 ? diff : 0);
+            const validDiff = diff > 0 ? diff : 0; // 修改：提取时长变量
+            totalUsed += validDiff;
+            currentSessionTime = validDiff; // 新增：记录本次时长
         }
         
         const pool = parseInt(p.time_pool);
@@ -145,6 +150,19 @@ function renderProjects() {
         card.className = `card ${currentView === 'recycle' ? 'deleted' : ''} ${isCompactMode ? 'compact' : ''}`;
         card.setAttribute('data-id', p.id); 
 
+       // --- 新增：准备右上角状态 HTML (包含 Running 和 计时器) ---
+       let statusHtml = '';
+       if (currentView === 'recycle') {
+           statusHtml = `<span class="status-badge" style="color:var(--secondary-text)">Deleted</span>`;
+       } else if (p.is_running == 1) {
+           // 正在运行：显示 Running + 计时器
+           statusHtml = `
+               <div style="text-align: right;">
+                   <div id="disp-session-${p.id}" class="session-timer">${formatTime(currentSessionTime)}</div>
+               </div>`;
+       } else {
+           statusHtml = `<span class="status-badge" style="color:var(--accent-red)">Paused</span>`;
+       }
         // --- 分支：根据是否是精简模式，渲染不同的 HTML ---
         
         if (isCompactMode) {
@@ -157,9 +175,9 @@ function renderProjects() {
             if (currentView === 'active') {
                 compactButtons = `
                     <button class="btn Foldedbtn ${p.is_running == 1 ? 'btn-green' : 'btn-red'} btn-full" onclick="toggleTimer(${p.id}, ${p.is_running})">
-                        ${p.is_running == 1 ? '进行中...' : '已暂停 ▶'}
+                        ${p.is_running == 1 ? '进行中...' : '已暂停'}
                     </button>
-                    <button class="btn btn-blue btn-full Foldedbtn" onclick="openAdjustModal(${p.id}, 'used')">修改已用</button>
+                    <button class="btn btn-blue btn-full Foldedbtn" onclick="openAdjustModal(${p.id}, 'used')">改已用</button>
                     <button class="btn btn-purple btn-full Foldedbtn" onclick="openAdjustModal(${p.id}, 'pool')">修改池</button>
                     <button class="btn btn-yellow btn-full Foldedbtn" onclick="openEditModal(${p.id})">编辑</button>
                     <button class="btn btn-green btn-full Foldedbtn" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
@@ -177,18 +195,18 @@ function renderProjects() {
             card.innerHTML = `
                 <div class="card-header" style="margin-bottom:0;">
                     <h2 class="project-name" style="margin:0;">${p.name}</h2>
-                    <span class="status-badge">${p.is_running == 1 ? 'Running' : (currentView === 'recycle' ? 'Deleted' : 'Paused')}</span>
-                </div>
+                ${statusHtml}
+                    </div>
 
                 <div class="compact-time-grid">
                     <div class="compact-time-block">
-                        <span class="compact-time-value" style="color:var(--accent-blue)" id="disp-used-${p.id}" data-base="${p.used_time}" data-start="${p.last_start_time}" data-running="${p.is_running}">
-                           已用 ${formatTime(totalUsed)}
+                        <span class="compact-time-value" style="color:var(--accent-blue)">
+                           已用 <span id="disp-used-${p.id}" data-base="${p.used_time}" data-start="${p.last_start_time}" data-running="${p.is_running}">${formatTime(totalUsed)}</span>
                         </span>
                     </div>
                     <div class="compact-time-block">
-                        <span class="compact-time-value" id="disp-remain-${p.id}" style="color: ${remaining < 0 ? '#ef4444' : '#10b981'}">
-                            剩余 ${remaining < 0 ? '-' : ''}${formatTime(Math.abs(remaining))}
+                        <span class="compact-time-value">
+                            剩余 <span id="disp-remain-${p.id}" style="color: ${remaining < 0 ? '#ef4444' : '#10b981'}">${remaining < 0 ? '-' : ''}${formatTime(Math.abs(remaining))}</span>
                         </span>
                     </div>
                     <div class="compact-time-block">
@@ -239,7 +257,7 @@ function renderProjects() {
                         <h2 class="project-name">${p.name}</h2>
                         <div class="project-desc">${p.description}</div>
                     </div>
-                    <span class="status-badge">${p.is_running == 1 ? 'Running...' : (currentView === 'recycle' ? '已删除' : 'Paused')}</span>
+                ${statusHtml}
                 </div>
                 <div class="time-rows">
                     <div class="time-row">
@@ -286,15 +304,19 @@ function renderProjects() {
                 const remainEl = document.getElementById(`disp-remain-${p.id}`);
                 const percentEl = document.getElementById(`disp-percent-${p.id}`);
                 const barEl = document.getElementById(`disp-bar-${p.id}`);
-                
+                const sessionEl = document.getElementById(`disp-session-${p.id}`); // 新增：获取计时器元素
+
                 if (usedEl && remainEl) {
                     const baseUsed = parseInt(p.used_time);
                     const startTime = parseInt(p.last_start_time);
-                    const currentDiff = Math.max(0, nowUnix - startTime);
+                    const currentDiff = Math.max(0, nowUnix - startTime); // 这是本次运行时长
                     const totalUsed = baseUsed + currentDiff;
                     const pool = parseInt(p.time_pool);
                     const remaining = pool - totalUsed;
-
+// 新增：更新右上角本次计时器
+                   if (sessionEl) {
+                       sessionEl.innerText = formatTime(currentDiff);
+                  }
                     usedEl.innerText = formatTime(totalUsed);
                     
                     let remainStr = formatTime(Math.abs(remaining));
