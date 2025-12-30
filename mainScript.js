@@ -1,52 +1,65 @@
-    let projectsData = [];
-    let currentView = 'active'; 
-    let currentAdjustMethod = 'add';
+// --- 变量定义区域 ---
+let projectsData = [];
+let currentView = 'active'; 
+let currentAdjustMethod = 'add';
+// 【新增】读取精简模式状态
+let isCompactMode = localStorage.getItem('isCompactMode') === 'true';
 
 document.addEventListener('DOMContentLoaded', () => {
-                // 1. 初始化主题 (读取本地存储)
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') {
-            document.body.classList.remove('dark-mode');
-        } else {
-            // 默认为暗色 (对应 body class="dark-mode")
-            document.body.classList.add('dark-mode');
-        }
+    // 1. 初始化主题
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.remove('dark-mode');
+    } else {
+        document.body.classList.add('dark-mode');
+    }
 
-        // 2. 启动应用
-        fetchProjects();
-        setInterval(updateDisplayTimes, 1000);
-        // --- 【新增】初始化拖拽排序 ---
-        const grid = document.getElementById('projectGrid');
-        new Sortable(grid, {
-            animation: 150, // 拖动时的平滑动画
-            delay: 300,     // 【关键】长按 300ms 后才能拖动（防止手机滚动时误触，也实现了PC长按需求）
-            delayOnTouchOnly: false, // 设为 false 让 PC 也遵循 delay，实现“长按拖动”
-            touchStartThreshold: 5, // 手指移动超过 5px 取消长按判定（防止抖动）
-            chosenClass: "sortable-chosen", // 拖动时的样式类名
-            dragClass: "sortable-drag",     // 正在被拖拽元素的样式
-            
-            // 只有在“我的项目”视图下才允许排序
-            onStart: function (evt) {
-                if (currentView === 'recycle') return false; // 回收站禁止排序
-            },
-            
-            // 拖动结束后的回调
-            onEnd: function (evt) {
-                if (currentView === 'recycle') return;
+    // 【新增】初始化折叠按钮文字
+    updateCompactButtonText();
 
-                // 获取新的排序 ID 列表
-                const itemEls = grid.children;
-                let newOrder = [];
-                for (let i = 0; i < itemEls.length; i++) {
-                    const id = itemEls[i].getAttribute('data-id');
-                    if(id) newOrder.push(id);
-                }
+    // 2. 启动应用
+    fetchProjects();
+    setInterval(updateDisplayTimes, 1000);
 
-                // 发送给服务器保存
-                saveOrder(newOrder);
+    // ... (SortableJS 初始化代码保持不变，请保留) ...
+    const grid = document.getElementById('projectGrid');
+    new Sortable(grid, {
+        animation: 150,
+        delay: 300,
+        delayOnTouchOnly: false,
+        touchStartThreshold: 5,
+        chosenClass: "sortable-chosen",
+        dragClass: "sortable-drag",
+        onStart: function (evt) {
+            if (currentView === 'recycle') return false;
+        },
+        onEnd: function (evt) {
+            if (currentView === 'recycle') return;
+            const itemEls = grid.children;
+            let newOrder = [];
+            for (let i = 0; i < itemEls.length; i++) {
+                const id = itemEls[i].getAttribute('data-id');
+                if(id) newOrder.push(id);
             }
-        });
+            saveOrder(newOrder);
+        }
     });
+});
+
+// --- 【新增】切换视图模式函数 ---
+function toggleViewMode() {
+    isCompactMode = !isCompactMode;
+    localStorage.setItem('isCompactMode', isCompactMode);
+    updateCompactButtonText();
+    renderProjects(); // 重新渲染列表
+}
+
+function updateCompactButtonText() {
+    const btn = document.getElementById('btnToggleView');
+    if (btn) {
+        btn.innerText = isCompactMode ? '🔼 展开显示' : '≡ 折叠显示';
+    }
+}
 
     // --- 【新增】保存排序函数 ---
     async function saveOrder(orderList) {
@@ -96,47 +109,109 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 // 渲染卡片
-    function renderProjects() {
-        const grid = document.getElementById('projectGrid');
-        grid.innerHTML = '';
+// --- 【核心修改】渲染卡片函数 ---
+function renderProjects() {
+    const grid = document.getElementById('projectGrid');
+    grid.innerHTML = '';
 
-        if (projectsData.length === 0) {
-            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--secondary-text); padding: 40px;">暂无项目</div>`;
-            return;
+    if (projectsData.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--secondary-text); padding: 40px;">暂无项目</div>`;
+        return;
+    }
+
+    projectsData.forEach(p => {
+        // 1. 计算时间数据
+        let totalUsed = parseInt(p.used_time); 
+        if (p.is_running == 1) {
+            const nowUnix = Math.floor(Date.now() / 1000);
+            const diff = nowUnix - parseInt(p.last_start_time);
+            totalUsed += (diff > 0 ? diff : 0);
+        }
+        
+        const pool = parseInt(p.time_pool);
+        const remaining = pool - totalUsed;
+        
+        // 计算百分比和颜色
+        const percentRaw = pool > 0 ? Math.round((totalUsed / pool) * 100) : null;
+        const percentForWidth = percentRaw === null ? 0 : Math.min(100, Math.max(0, percentRaw));
+        let barBackground = 'linear-gradient(90deg, #60a5fa, #10b981)'; 
+        if (percentRaw !== null && percentRaw > 100) {
+            barBackground = 'linear-gradient(90deg, #f97316, #ef4444)';
         }
 
-        projectsData.forEach(p => {
-            let totalUsed = parseInt(p.used_time); 
-            if (p.is_running == 1) {
-                const nowUnix = Math.floor(Date.now() / 1000);
-                const diff = nowUnix - parseInt(p.last_start_time);
-                totalUsed += (diff > 0 ? diff : 0);
-            }
+        // 创建卡片容器
+        const card = document.createElement('div');
+        // 如果是精简模式，添加 compact 类
+        card.className = `card ${currentView === 'recycle' ? 'deleted' : ''} ${isCompactMode ? 'compact' : ''}`;
+        card.setAttribute('data-id', p.id); 
+
+        // --- 分支：根据是否是精简模式，渲染不同的 HTML ---
+        
+        if (isCompactMode) {
+            // ======================
+            // 🅰️ 精简模式 HTML (高度变短，隐藏无关信息)
+            // ======================
             
-            const pool = parseInt(p.time_pool);
-            const remaining = pool - totalUsed;
-            
-            // 计算百分比和颜色
-            const percentRaw = pool > 0 ? Math.round((totalUsed / pool) * 100) : null;
-            const percentForWidth = percentRaw === null ? 0 : Math.min(100, Math.max(0, percentRaw));
-            let barBackground = 'linear-gradient(90deg, #60a5fa, #10b981)'; 
-            if (percentRaw !== null && percentRaw > 100) {
-                barBackground = 'linear-gradient(90deg, #f97316, #ef4444)';
+            // 按钮逻辑 (精简版：只保留核心按钮)
+            let compactButtons = '';
+            if (currentView === 'active') {
+                compactButtons = `
+                    <button class="btn Foldedbtn ${p.is_running == 1 ? 'btn-green' : 'btn-red'} btn-full" onclick="toggleTimer(${p.id}, ${p.is_running})">
+                        ${p.is_running == 1 ? '进行中...' : '已暂停 ▶'}
+                    </button>
+                    <button class="btn btn-blue btn-full Foldedbtn" onclick="openAdjustModal(${p.id}, 'used')">修改已用</button>
+                    <button class="btn btn-purple btn-full Foldedbtn" onclick="openAdjustModal(${p.id}, 'pool')">修改池</button>
+                    <button class="btn btn-yellow btn-full Foldedbtn" onclick="openEditModal(${p.id})">编辑</button>
+                    <button class="btn btn-green btn-full Foldedbtn" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
+                    
+                `;
+            } else {
+                // 回收站模式下，还是需要保留还原/删除
+                compactButtons = `
+                    <button class="btn btn-purple btn-full" onclick="restoreProject(${p.id})">♻️ 还原</button>
+                    <button class="btn btn-red btn-full" onclick="cleanProject(${p.id})">❌ 删除</button>
+                    <button class="btn btn-outline btn-full" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
+                `;
             }
 
-            // 创建卡片元素
-            const card = document.createElement('div');
-            card.className = `card ${currentView === 'recycle' ? 'deleted' : ''}`;
-            // 添加 data-id 用于排序
-            card.setAttribute('data-id', p.id); 
+            card.innerHTML = `
+                <div class="card-header" style="margin-bottom:0;">
+                    <h2 class="project-name" style="margin:0;">${p.name}</h2>
+                    <span class="status-badge">${p.is_running == 1 ? 'Running' : (currentView === 'recycle' ? 'Deleted' : 'Paused')}</span>
+                </div>
 
-            // 按钮逻辑
+                <div class="compact-time-grid">
+                    <div class="compact-time-block">
+                        <span class="compact-time-value" style="color:var(--accent-blue)" id="disp-used-${p.id}" data-base="${p.used_time}" data-start="${p.last_start_time}" data-running="${p.is_running}">
+                           已用 ${formatTime(totalUsed)}
+                        </span>
+                    </div>
+                    <div class="compact-time-block">
+                        <span class="compact-time-value" id="disp-remain-${p.id}" style="color: ${remaining < 0 ? '#ef4444' : '#10b981'}">
+                            剩余 ${remaining < 0 ? '-' : ''}${formatTime(Math.abs(remaining))}
+                        </span>
+                    </div>
+                    <div class="compact-time-block">
+                        <span class="compact-time-value pool">时间池 ${formatTime(pool)}</span>
+                    </div>
+                </div>
+
+                <div class="btn-group" style="margin-top:5px;">
+                    ${compactButtons}
+                </div>
+            `;
+
+        } else {
+            // ======================
+            // 🅱️ 完整模式 HTML (保持原有代码不变)
+            // ======================
+            
             let actionButtons = '';
             if (currentView === 'active') {
                 actionButtons = `
                     <div class="btn-group">
                         <button class="btn ${p.is_running == 1 ? 'btn-green' : 'btn-red'} btn-full" onclick="toggleTimer(${p.id}, ${p.is_running})">
-                            ${p.is_running == 1 ? '进行中...' : '已暂停'}
+                            ${p.is_running == 1 ? '进行中...' : '已暂停 ▶'}
                         </button>
                         <button class="btn btn-blue btn-full" onclick="openAdjustModal(${p.id}, 'used')">修改已用</button>
                         <button class="btn btn-purple btn-full" onclick="openAdjustModal(${p.id}, 'pool')">修改池</button>
@@ -164,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h2 class="project-name">${p.name}</h2>
                         <div class="project-desc">${p.description}</div>
                     </div>
-                    <span class="status-badge" style="color: ${p.is_running == 1 ? 'var(--accent-green)' : (currentView === 'recycle' ? 'var(--secondary-text)' : 'var(--accent-red)')}">${p.is_running == 1 ? 'Running...' : (currentView === 'recycle' ? '已删除' : 'Paused')}</span>
+                    <span class="status-badge">${p.is_running == 1 ? 'Running...' : (currentView === 'recycle' ? '已删除' : 'Paused')}</span>
                 </div>
                 <div class="time-rows">
                     <div class="time-row">
@@ -195,9 +270,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 ${actionButtons}
             `;
-            grid.appendChild(card);
-        });
-    }
+        }
+
+        grid.appendChild(card);
+    });
+}
 
     function updateDisplayTimes() {
         if (currentView === 'recycle') return; 
