@@ -1,13 +1,25 @@
 # time_pool
-this is simple timer for record used time form time pool, used html+php+js+mysql，can put it on the cheap web site for remine my I should fix the poject when I wiset time.
+this is simple timer for record used time form time pool, used html+php+js+mysql with gemini AI ，can put it on the light webserver , can remine me should fix the poject when I wast time.
 # 说明
 重要说明：这是一个通过谷歌gemini协助下生成的一个网页应用，由于我不是很会写代码，整个应用对我来说就像是黑箱一般无法理解。
 
-这个网页是一个计时器，可以建立很多的小卡片记录每个项目的预计时间和消耗的时间，整个项目需要用到php、js、mysql，也就是一个带有数据库的云服务器，这真的很便宜。
+这个网页是一个计时器，可以建立很多的小卡片记录每个项目的预计时间和消耗的时间，整个项目需要用到php、js、mysql，一个带有数据库的云服务器即可。
+
+注意在使用前需要修改数据库。
+
+# 效果（只截图手机版）
+<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/6a9924ba-4d30-442e-a942-f39eec97b0d5" />
+<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/ff2537bd-aacc-4309-8cb3-5800a957bd90" />
+<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/3f1896b6-9372-4fe9-9ffe-9ca3802359a8" />
+<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/11e395b1-8d82-440a-bb4e-6fbf2b53d4e9" />
+
+
 # 使用说明
  1. 将所有文件下载到本地
- 2. 修改api.php中关于数据库的部分
+ 2. 修改examplel.config_local.php为config_local.php
 
+    修改配置内容
+    
       $host = 'localhost';
     
       $db   = '';   #数据库名称
@@ -20,7 +32,5 @@ this is simple timer for record used time form time pool, used html+php+js+mysql
  
  4.将“mysql.sql”导入到对应的数据库
  
- 5.测试，或者上传到服务器上测试，由于我的技术太差，没有制作网页版快速安装包，这对于我使用AI来写代码的人来说成本太高。
+ 5.测试，或者上传到服务器上测试。
 
-# 其他
-icon.svg这个文件是我从iconfont上找来后，自己动手修改的，并没有该文件的版权，我对此并不负责，只是为了好看而已。
