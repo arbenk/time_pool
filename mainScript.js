@@ -2,7 +2,7 @@
     let currentView = 'active'; 
     let currentAdjustMethod = 'add';
 
-    document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
                 // 1. 初始化主题 (读取本地存储)
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'light') {
@@ -15,7 +15,52 @@
         // 2. 启动应用
         fetchProjects();
         setInterval(updateDisplayTimes, 1000);
+        // --- 【新增】初始化拖拽排序 ---
+        const grid = document.getElementById('projectGrid');
+        new Sortable(grid, {
+            animation: 150, // 拖动时的平滑动画
+            delay: 300,     // 【关键】长按 300ms 后才能拖动（防止手机滚动时误触，也实现了PC长按需求）
+            delayOnTouchOnly: false, // 设为 false 让 PC 也遵循 delay，实现“长按拖动”
+            touchStartThreshold: 5, // 手指移动超过 5px 取消长按判定（防止抖动）
+            chosenClass: "sortable-chosen", // 拖动时的样式类名
+            dragClass: "sortable-drag",     // 正在被拖拽元素的样式
+            
+            // 只有在“我的项目”视图下才允许排序
+            onStart: function (evt) {
+                if (currentView === 'recycle') return false; // 回收站禁止排序
+            },
+            
+            // 拖动结束后的回调
+            onEnd: function (evt) {
+                if (currentView === 'recycle') return;
+
+                // 获取新的排序 ID 列表
+                const itemEls = grid.children;
+                let newOrder = [];
+                for (let i = 0; i < itemEls.length; i++) {
+                    const id = itemEls[i].getAttribute('data-id');
+                    if(id) newOrder.push(id);
+                }
+
+                // 发送给服务器保存
+                saveOrder(newOrder);
+            }
+        });
     });
+
+    // --- 【新增】保存排序函数 ---
+    async function saveOrder(orderList) {
+        const formData = new FormData();
+        formData.append('action', 'update_order');
+        // 将数组作为多个值传递，或 JSON 字符串。
+        // PHP 接收数组比较方便的方式是利用 name[] 格式，或者直接在前端多次 append
+        orderList.forEach(id => {
+            formData.append('order[]', id);
+        });
+
+        await fetch('api.php', { method: 'POST', body: formData });
+        // 保存后不需要刷新列表，因为前端已经变了
+    }
     
     // 切换主题并保存
     function toggleTheme() {
@@ -50,7 +95,7 @@
         renderProjects();
     }
 
-    // 渲染卡片
+// 渲染卡片
     function renderProjects() {
         const grid = document.getElementById('projectGrid');
         grid.innerHTML = '';
@@ -79,9 +124,12 @@
                 barBackground = 'linear-gradient(90deg, #f97316, #ef4444)';
             }
 
+            // 创建卡片元素
             const card = document.createElement('div');
             card.className = `card ${currentView === 'recycle' ? 'deleted' : ''}`;
-            
+            // 添加 data-id 用于排序
+            card.setAttribute('data-id', p.id); 
+
             // 按钮逻辑
             let actionButtons = '';
             if (currentView === 'active') {

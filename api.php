@@ -45,14 +45,27 @@ function addLog($pdo, $projectId, $type, $msg) {
 switch ($action) {
     case 'get_projects':
         $isDeleted = isset($_POST['view']) && $_POST['view'] === 'recycle' ? 1 : 0;
-        $stmt = $pdo->prepare("SELECT * FROM projects WHERE is_deleted = ? ORDER BY id DESC");
+        // 修改：按 sort_order 升序排列
+        $stmt = $pdo->prepare("SELECT * FROM projects WHERE is_deleted = ? ORDER BY sort_order ASC");
         $stmt->execute([$isDeleted]);
         $projects = $stmt->fetchAll();
         $now = time();
         foreach ($projects as &$p) { $p['server_now'] = $now; }
         echo json_encode($projects);
         break;
-
+    // --- 新增：更新排序 ---
+    case 'update_order':
+            // 前端传过来一个 id 数组，顺序就是新的顺序
+            $order = $_POST['order']; 
+            if (is_array($order)) {
+                foreach ($order as $index => $id) {
+                    // index 就是新的排序序号
+                    $stmt = $pdo->prepare("UPDATE projects SET sort_order = ? WHERE id = ?");
+                    $stmt->execute([$index, $id]);
+                }
+            }
+            echo json_encode(['status' => 'success']);
+            break;
     case 'create_project':
         $name = $_POST['name'];
         $desc = $_POST['description'];

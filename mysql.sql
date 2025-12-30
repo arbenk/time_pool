@@ -91,3 +91,10 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- 1. 增加排序字段，默认值为 9999 (让新项目默认排在后面，或者你可以设为0)
+ALTER TABLE `projects` ADD COLUMN `sort_order` INT(11) DEFAULT 0;
+
+-- 2. (可选) 初始化现有数据的排序，让它们按 ID 顺序排列
+SET @rownum=0;
+UPDATE projects SET sort_order = (@rownum:=@rownum+1) ORDER BY id DESC;

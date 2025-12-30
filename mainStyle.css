@@ -235,6 +235,22 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
 .time-tag { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
 .time-tag span:first-child { opacity: 0.7; font-size: 0.8rem;}
 
+/* 拖动时的样式 */
+.sortable-chosen {
+    background-color: var(--input-bg);
+    opacity: 0.9;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    transform: scale(1.02);
+}
+
+/* 即使在普通状态下，也给卡片头部加个抓手光标，提示可操作 */
+.card-header {
+    cursor: grab;
+}
+.card-header:active {
+    cursor: grabbing;
+}
+
 /* --- 响应式布局：手机端 (宽度小于 600px) --- */
 @media (max-width: 600px) {
     .history-item {
