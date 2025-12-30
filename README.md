@@ -7,12 +7,9 @@ this is simple timer for record used time form time pool, used html+php+js+mysql
 
 注意在使用前需要修改数据库。
 
-# 效果（只截图手机版）
-<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/6a9924ba-4d30-442e-a942-f39eec97b0d5" />
-<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/ff2537bd-aacc-4309-8cb3-5800a957bd90" />
-<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/3f1896b6-9372-4fe9-9ffe-9ca3802359a8" />
-<img width="200" height="auto" alt="image" src="https://github.com/user-attachments/assets/11e395b1-8d82-440a-bb4e-6fbf2b53d4e9" />
-
+# 效果
+<img width="500" height="auto" alt="image" src="https://github.com/user-attachments/assets/0ce80ad4-cda5-42e5-908d-7a7b5446f5c5"/>
+<img width="500" height="auto" alt="image" src="https://github.com/user-attachments/assets/710adde4-fc5d-434b-8f95-726dddae195d"/>
 
 # 使用说明
  1. 将所有文件下载到本地
