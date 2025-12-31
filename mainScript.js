@@ -5,19 +5,38 @@ let currentAdjustMethod = 'add';
 // 【新增】读取精简模式状态
 let isCompactMode = localStorage.getItem('isCompactMode') === 'true';
 
+// 【新增】设置状态变量
+let isAutoTheme = localStorage.getItem('isAutoTheme') === 'true';
+let isDimmingEnabled = localStorage.getItem('isDimmingEnabled') !== 'false'; // 默认开启
+
+// 自动主题检测定时器
+let autoThemeInterval = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. 初始化主题
     const savedTheme = localStorage.getItem('theme');
+    // 如果开启了自动主题，将在 initAutoTheme 中覆盖
     if (savedTheme === 'light') {
         document.body.classList.remove('dark-mode');
     } else {
         document.body.classList.add('dark-mode');
     }
 
-    // 【新增】初始化折叠按钮文字
+    // 2. 初始化设置状态到 UI
+    document.getElementById('settingAutoTheme').checked = isAutoTheme;
+    document.getElementById('settingDimming').checked = isDimmingEnabled;
+    
     updateCompactButtonText();
 
-    // 2. 启动应用
+    // 3. 绑定主题按钮长按/点击逻辑
+    initThemeButton();
+
+    // 4. 初始化自动主题逻辑
+    if (isAutoTheme) {
+        initAutoTheme();
+    }
+
+    // 5. 启动应用
     fetchProjects();
     setInterval(updateDisplayTimes, 1000);
 
@@ -46,7 +65,132 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 });
 
-// --- 【新增】切换视图模式函数 ---
+// --- 【新增】主题按钮的长按/点击处理 ---
+function initThemeButton() {
+    const btn = document.getElementById('btnTheme');
+    let pressTimer;
+    let isLongPress = false;
+
+    const startPress = (e) => {
+        // e.preventDefault(); // 暂时注释，避免影响点击
+        isLongPress = false;
+        pressTimer = setTimeout(() => {
+            isLongPress = true;
+            // 触发长按：打开设置弹窗
+            document.getElementById('settingsModal').style.display = 'flex';
+        }, 600); // 600ms 长按阈值
+    };
+
+    const endPress = (e) => {
+        clearTimeout(pressTimer);
+        if (!isLongPress) {
+            // 如果不是长按，则是点击：切换主题
+            // 注意：如果开启了自动主题，手动切换将暂时覆盖，但在下次自动检测时可能会变回
+            toggleTheme();
+        }
+    };
+
+    // 鼠标事件
+    btn.addEventListener('mousedown', startPress);
+    btn.addEventListener('mouseup', endPress);
+    btn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+
+    // 触摸事件 (手机端)
+    btn.addEventListener('touchstart', (e) => { 
+        // 阻止默认行为可能会阻止点击，所以这里要注意
+        // e.preventDefault(); 
+        startPress(e);
+    });
+    btn.addEventListener('touchend', endPress);
+    
+    // 防止长按弹出右键菜单
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+// --- 【新增】设置功能函数 ---
+
+// 切换自动主题开关
+function toggleAutoTheme(checked) {
+    isAutoTheme = checked;
+    localStorage.setItem('isAutoTheme', isAutoTheme);
+    
+    if (isAutoTheme) {
+        initAutoTheme();
+    } else {
+        if (autoThemeInterval) clearInterval(autoThemeInterval);
+    }
+}
+
+// 切换暂停变暗开关
+function toggleDimming(checked) {
+    isDimmingEnabled = checked;
+    localStorage.setItem('isDimmingEnabled', isDimmingEnabled);
+    renderProjects(); // 重新渲染以应用样式
+}
+
+// 初始化自动主题 (获取经纬度 -> 计算日出日落)
+function initAutoTheme() {
+    // 立即执行一次
+    checkAutoTheme();
+    // 每分钟检查一次
+    if (autoThemeInterval) clearInterval(autoThemeInterval);
+    autoThemeInterval = setInterval(checkAutoTheme, 60000);
+}
+
+function checkAutoTheme() {
+    if (!isAutoTheme) return;
+
+    // 尝试获取地理位置
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            const lat = position.coords.latitude;
+            const long = position.coords.longitude;
+            applyThemeByLocation(lat, long);
+        }, (error) => {
+            console.log("无法获取位置，使用默认时间 (6:00 - 18:00) 切换主题");
+            applyThemeByTime();
+        });
+    } else {
+        applyThemeByTime();
+    }
+}
+
+// 简易算法：根据时间切换 (fallback)
+function applyThemeByTime() {
+    const hour = new Date().getHours();
+    const isDay = hour >= 6 && hour < 18;
+    setTheme(!isDay); // 白天 -> light (非dark), 晚上 -> dark
+}
+
+// 简易算法：根据经纬度计算日出日落 (简化版)
+function applyThemeByLocation(lat, lng) {
+    // 这里使用一个简单的近似计算，或者直接请求 API
+    // 为了不依赖外部 API，这里使用 SunCalc 的简化逻辑
+    const now = new Date();
+    // 此处省略复杂的 SunCalc 算法，使用本地时间修正
+    // 简单起见，我们依然使用时间，但可以根据经度稍微调整“正午”偏移
+    // 真正的晨昏线计算代码量较大，这里用时间兜底：
+    const hour = now.getHours();
+    const isDay = hour >= 6 && hour < 18; // 实际项目中建议引入 SunCalc 库
+    setTheme(!isDay);
+}
+
+function setTheme(isDark) {
+    if (isDark) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+    }
+}
+
+// 切换主题并保存 (手动)
+function toggleTheme() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+
 function toggleViewMode() {
     isCompactMode = !isCompactMode;
     localStorage.setItem('isCompactMode', isCompactMode);
@@ -70,24 +214,15 @@ async function saveOrder(orderList) {
     orderList.forEach(id => {
         formData.append('order[]', id);
     });
-
     await fetch('api.php', { method: 'POST', body: formData });
-}
-
-// 切换主题并保存
-function toggleTheme() {
-    const isDark = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
 }
 
 function switchView(view) {
     currentView = view;
     document.getElementById('tabActive').classList.toggle('active', view === 'active');
     document.getElementById('tabRecycle').classList.toggle('active', view === 'recycle');
-    
     document.getElementById('btnAddProject').style.display = view === 'active' ? 'inline-block' : 'none';
     document.getElementById('btnCleanAll').style.display = view === 'recycle' ? 'inline-block' : 'none';
-
     fetchProjects();
 }
 
@@ -95,7 +230,6 @@ async function fetchProjects() {
     const formData = new FormData();
     formData.append('action', 'get_projects');
     formData.append('view', currentView);
-    
     const res = await fetch('api.php', { method: 'POST', body: formData });
     projectsData = await res.json();
     renderProjects();
@@ -139,15 +273,15 @@ function renderProjects() {
         // 创建卡片容器
         const card = document.createElement('div');
         
-        // 【核心修改】判断是否需要添加 'paused' 类
-        // 条件：在“我的项目”视图下 且 项目未运行 (is_running == 0)
+        // 【核心修改】状态类逻辑
+        // 1. 基本状态：回收站 / 精简模式
+        // 2. 暂停变暗：如果是 active 视图 + 未运行 + 开启了变暗设置
         const isPaused = (currentView === 'active' && p.is_running == 0);
-
-        // 拼接类名：
-        // 1. deleted: 回收站样式  // 2. compact: 精简模式样式  // 3. paused: 新增的暂停滤镜样式
-        card.className = `card ${currentView === 'recycle' ? 'deleted' : ''} ${isCompactMode ? 'compact' : ''} ${isPaused ? 'paused' : ''}`;
+        // 只有当 switch 开启时，才添加 dimmed 类 (配合 CSS 实现滤镜)
+        const dimClass = (isPaused && isDimmingEnabled) ? 'paused dimmed' : '';
         
-        card.setAttribute('data-id', p.id);
+        card.className = `card ${currentView === 'recycle' ? 'deleted' : ''} ${isCompactMode ? 'compact' : ''} ${dimClass}`;
+        card.setAttribute('data-id', p.id); 
 
        // --- 新增：准备右上角状态 HTML (包含 Running 和 计时器) ---
        let statusHtml = '';
@@ -180,7 +314,6 @@ function renderProjects() {
                     <button class="btn btn-purple btn-full Foldedbtn" onclick="openAdjustModal(${p.id}, 'pool')">修改池</button>
                     <button class="btn btn-yellow btn-full Foldedbtn" onclick="openEditModal(${p.id})">编辑</button>
                     <button class="btn btn-green btn-full Foldedbtn" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
-                    
                 `;
             } else {
                 // 回收站模式下，还是需要保留还原/删除
@@ -196,7 +329,6 @@ function renderProjects() {
                     <h2 class="project-name" style="margin:0;">${p.name}</h2>
                     ${statusHtml}
                 </div>
-
                 <div class="compact-time-grid">
                     <div class="compact-time-block">
                         <span class="compact-time-value" style="color:var(--accent-blue)">
@@ -213,12 +345,10 @@ function renderProjects() {
                         <span class="compact-time-value pool" style="text-align:right">时间池<br>${formatTime(pool)}</span>
                     </div>
                 </div>
-
                 <div class="btn-group" style="margin-top:5px;">
                     ${compactButtons}
                 </div>
             `;
-
         } else {
             // ======================
             // 🅱️ 完整模式 HTML (保持原有代码不变)
@@ -237,7 +367,6 @@ function renderProjects() {
                     <div class="btn-group">
                         <button class="btn btn-yellow btn-full" onclick="openEditModal(${p.id})">编辑</button>
                         <button class="btn btn-green btn-full" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
-
                     </div>
                 `;
             } else {
@@ -265,7 +394,6 @@ function renderProjects() {
                         <span class="time-label">剩余时间</span>
                         <span class="time-value" id="disp-remain-${p.id}" style="color: ${remaining < 0 ? '#ef4444' : '#10b981'}">${remaining < 0 ? '-' : ''}${formatTime(Math.abs(remaining))}</span>
                     </div>
-
                     <div class="time-row">
                         <span class="time-label">已用时间</span>
                         <span class="time-value highlight" id="disp-used-${p.id}" data-base="${p.used_time}" data-start="${p.last_start_time}" data-running="${p.is_running}">${formatTime(totalUsed)}</span>
@@ -274,7 +402,6 @@ function renderProjects() {
                         <span class="time-label">时间池</span>
                         <span class="time-value pool">${formatTime(pool)}</span>
                     </div>
-                    
                     <div class="time-row">
                         <span class="time-label">进度</span>
                         <div style="flex:1; display:flex; align-items:center; gap:8px;">
@@ -290,7 +417,6 @@ function renderProjects() {
                 ${actionButtons}
             `;
         }
-
         grid.appendChild(card);
     });
 }
@@ -364,12 +490,10 @@ function toggleTimer(id, isRunning) {
 async function submitStopTimer() {
     const id = document.getElementById('stopProjectId').value;
     const remark = document.getElementById('stopRemarkInput').value.trim();
-
     if (!remark) {
         alert('请填写本次工作内容的备注！');
         return;
     }
-
     await executeTimerRequest(id, 'stop', remark);
     closeModal('stopModal');
 }
@@ -382,7 +506,6 @@ async function executeTimerRequest(id, type, remark) {
     if (remark) {
         formData.append('remark', remark);
     }
-    
     await fetch('api.php', { method: 'POST', body: formData });
     fetchProjects(); 
 }
@@ -469,7 +592,7 @@ function renderHistoryList(logs) {
     logs.forEach(log => {
         const div = document.createElement('div');
         div.className = 'history-item';
-
+        
         // --- 1. 准备数据模块 ---
         // --- 1. 准备快照数据 (Snapshot - 右侧) ---
         // A. Snapshot 数据 (剩余/已用/总池)
@@ -500,7 +623,7 @@ function renderHistoryList(logs) {
                 </div>
             `;
         }
-        
+
         // B. Session 数据 (时长/结束/开始)
         // --- 2. 解析消息 & 提取关键时间到左侧 ---
         let sessionHtml = ''; 
@@ -546,27 +669,25 @@ function renderHistoryList(logs) {
 
             } catch (e) { /* 兼容旧文本数据 */ }
         } 
-        
         // 【场景 B：修改时间】
         else if (log.action_type === 'modify_used' || log.action_type === 'modify_pool') {
             try {
                 // 尝试解析 JSON
                 const data = JSON.parse(log.message);
                 displayTitle = data.remark ? data.remark : (log.action_type === 'modify_used' ? '修改已用' : '修改时间池');
-                
                 const isAdd = data.method === 'add';
                 const sign = isAdd ? '+' : '-';
                 const colorClass = isAdd ? 'inline-time-red' : 'inline-time-green';
                 // const label = log.action_type === 'modify_used' ? '已用' : '池';
                 inlineTimeHtml = `<span class="inline-time-tag ${colorClass}">${sign}${data.amount}</span>`;
-                
+
+                inlineTimeHtml = `<span class="inline-time-tag ${colorClass}">${label}${sign}${data.amount}</span>`;
             } catch (e) { 
                     // 兼容旧数据
                 if (log.message.includes('<br>')) {
                     const parts = log.message.split('<br>');
                     const timePart = parts[0]; 
                     displayTitle = parts[1];   
-                    
                     let colorClass = 'inline-time-green';
                     if (timePart.includes('+')) colorClass = 'inline-time-red';
                     inlineTimeHtml = `<span class="${colorClass}">${timePart}</span>`;

@@ -57,6 +57,9 @@ h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(90deg, #a5b4fc, #
     transition: opacity 0.2s;
     font-size: 0.9rem;
     display: inline-flex; align-items: center; justify-content: center;
+    /* 禁止用户选择，防止长按时选中文本 */
+    user-select: none; 
+    -webkit-user-select: none;
 }
 .btn:hover { opacity: 0.9; }
 .btn-outline { border: 1px solid var(--text-color); background: transparent; color: var(--text-color); }
@@ -284,7 +287,6 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
 .compact-time-label {
     font-size: 0.8rem;
     color: var(--secondary-text);
-
 }
 
 .compact-time-value {
@@ -321,8 +323,65 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
 .inline-time-red { color: var(--accent-red); }
 .inline-time-green { color: var(--accent-green); }
 
-/* --- 新增：暂停状态卡片样式 --- */
-.card.paused {
+/* --- 开关按钮 (Toggle Switch) 样式 --- */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px; width: 18px;
+  left: 3px; bottom: 3px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: var(--accent-blue);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--accent-blue);
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(20px);
+  -ms-transform: translateX(20px);
+  transform: translateX(20px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* --- 暂停状态卡片样式 (支持开关控制) --- */
+/* 只有当卡片同时有 .paused 和 .dimmed 类时，才应用滤镜 */
+.card.paused.dimmed {
     /* 变成 80% 灰色，亮度稍微降低，透明度微调 */
     /* filter: grayscale(0.9) brightness(0.7) opacity(1); */
         filter: grayscale(0.5) brightness(0.5) opacity(1);
@@ -330,8 +389,8 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
     transition: filter 0.1s ease, transform 0.1s;
 }
 
-/* 鼠标悬停时稍微恢复一点色彩（可选，增加交互感） */
-.card.paused:hover {
+/* 鼠标悬停时稍微恢复一点色彩 */
+.card.paused.dimmed:hover {
     filter: grayscale(0.5) brightness(0.8) opacity(1);
 }
 
@@ -354,17 +413,14 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
     }
 
     .history-details {
-        /* 关键：手机端改为上下排列，并反转顺序 */
-        /* column-reverse 会让 HTML 中排在后面的 Snapshot 跑到上面，Session 跑到下面 */
         flex-direction: column; 
-        /* width: 100%; */
         box-sizing: border-box;
         align-items: flex-end; /* 保持靠右对齐 */
         gap: 5px;
     }
 
     .detail-divider {
-        width: 100%; /* 变为横线 */
+        width: 100%; 
         height: 1px;
         min-height: 1px;
         background-color: var(--border-color);
