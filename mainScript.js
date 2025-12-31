@@ -201,16 +201,17 @@ function renderProjects() {
                 <div class="compact-time-grid">
                     <div class="compact-time-block">
                         <span class="compact-time-value" style="color:var(--accent-blue)">
-                           已用 <span id="disp-used-${p.id}" data-base="${p.used_time}" data-start="${p.last_start_time}" data-running="${p.is_running}">${formatTime(totalUsed)}</span>
+                           已用<br><span id="disp-used-${p.id}" data-base="${p.used_time}" data-start="${p.last_start_time}" data-running="${p.is_running}">${formatTime(totalUsed)}</span>
                         </span>
                     </div>
                     <div class="compact-time-block">
-                        <span class="compact-time-value">
-                            剩余 <span id="disp-remain-${p.id}" style="color: ${remaining < 0 ? '#ef4444' : '#10b981'}">${remaining < 0 ? '-' : ''}${formatTime(Math.abs(remaining))}</span>
+                        <span class="compact-time-value" style="color: ${remaining < 0 ? '#ef4444' : '#10b981'}">
+                            剩余<br>
+                            <span id="disp-remain-${p.id}">${remaining < 0 ? '-' : ''}${formatTime(Math.abs(remaining))}</span>
                         </span>
                     </div>
                     <div class="compact-time-block">
-                        <span class="compact-time-value pool">时间池 ${formatTime(pool)}</span>
+                        <span class="compact-time-value pool" style="text-align:right">时间池<br>${formatTime(pool)}</span>
                     </div>
                 </div>
 
@@ -235,8 +236,9 @@ function renderProjects() {
                         <button class="btn btn-purple btn-full" onclick="openAdjustModal(${p.id}, 'pool')">修改池</button>
                     </div>
                     <div class="btn-group">
-                        <button class="btn btn-green btn-full" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
                         <button class="btn btn-yellow btn-full" onclick="openEditModal(${p.id})">编辑</button>
+                        <button class="btn btn-green btn-full" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
+
                     </div>
                 `;
             } else {
@@ -429,7 +431,7 @@ function renderProjects() {
         document.getElementById('view-history').style.display = 'block';
         
         document.getElementById('fullHistoryProjectId').value = id;
-        document.getElementById('historyPageTitle').innerText = `历史记录：${projectName}`;
+        document.getElementById('historyPageTitle').innerText = `${projectName}`;
         document.getElementById('fullHistoryList').innerHTML = '<div style="text-align:center; padding:20px;">加载中...</div>';
 
         window.scrollTo(0, 0);
@@ -675,9 +677,7 @@ function renderProjects() {
     function openAdjustModal(id, target) {
         document.getElementById('adjustProjectId').value = id;
         document.getElementById('adjustTarget').value = target;
-        document.getElementById('adjustTitle').innerText = target === 'used' ? '修改已用时间' : '修改时间池';
-        document.getElementById('adjHours').value = 0;
-        document.getElementById('adjMins').value = 0;
+        // document.getElementById('adjustTitle').innerText = target === 'used' ? '修改已用时间' : '修改时间池';
         document.getElementById('adjRemark').value = '';
         setAdjustMethod('add');
         document.getElementById('adjustModal').style.display = 'flex';
@@ -722,9 +722,9 @@ function renderProjects() {
         const map = {
             'create': '➕',
             'start': '▶️', 
-            'stop': '🏁',
-            'modify_used': '🕒',
-            'modify_pool': '📅',
+            'stop': '📌',
+            'modify_used': '🎬',
+            'modify_pool': '⏳',
             'recycle': '🗑️',
             'restore': '♻️'
         };

@@ -100,7 +100,7 @@ h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(90deg, #a5b4fc, #
 .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
 .project-name { font-size: 1.25rem; font-weight: bold; color: var(--accent-green); margin: 0; }
 .status-badge { font-size: 0.8rem; color: var(--secondary-text); }
-.project-desc { font-size: 0.9rem; color: var(--secondary-text); margin: 5px 0 0 0; min-height: 1.2em;}
+.project-desc { text-align: justify; font-size: 0.9rem; color: var(--secondary-text); margin: 5px 0 0 0; min-height: 1.2em;}
 
 .time-row {
     display: flex;
@@ -194,7 +194,7 @@ h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(90deg, #a5b4fc, #
     flex: 1;
     padding-right: 10px;
 }
-.history-action { font-weight: 400; color: var(--text-color); display: flex; align-items: center; gap: 5px;}
+.history-action { text-align: justify; font-weight: 400; color: var(--text-color); display: flex; align-items: center; gap: 5px;}
 .history-date { font-size: 0.8rem; color: var(--secondary-text); }
 
 /* 右侧详情容器 (新布局) */
@@ -233,7 +233,7 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
     min-height: 40px;
 }
 
-.time-tag { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.time-tag { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
 .time-tag span:first-child { opacity: 0.7; font-size: 0.8rem;}
 
 /* 拖动时的样式 */

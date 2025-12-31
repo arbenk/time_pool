@@ -134,16 +134,16 @@ switch ($action) {
             $curr = $stmt->fetch()['used_time'];
             $newVal = ($method === 'add') ? $curr + $seconds : max(0, $curr - $seconds);
             $pdo->prepare("UPDATE projects SET used_time = ? WHERE id = ?")->execute([$newVal, $id]);
-            $actionMsg = ($method === 'add') ? "增加" : "减少";
-            addLog($pdo, $id, 'modify_used', "修改已用: {$actionMsg} {$h}h {$m}m (备注: $remark)");
+            $actionMsg = ($method === 'add') ? "+" : "-";
+            addLog($pdo, $id, 'modify_used', "已用{$actionMsg}{$h}:{$m}:00<br>$remark");
         } else {
             $stmt = $pdo->prepare("SELECT time_pool FROM projects WHERE id = ?");
             $stmt->execute([$id]);
             $curr = $stmt->fetch()['time_pool'];
             $newVal = ($method === 'add') ? $curr + $seconds : max(0, $curr - $seconds);
             $pdo->prepare("UPDATE projects SET time_pool = ? WHERE id = ?")->execute([$newVal, $id]);
-            $actionMsg = ($method === 'add') ? "增加" : "减少";
-            addLog($pdo, $id, 'modify_pool', "修改时间池: {$actionMsg} {$h}h {$m}m (备注: $remark)");
+            $actionMsg = ($method === 'add') ? "+" : "-";
+            addLog($pdo, $id, 'modify_pool', "时间池{$actionMsg}{$h}:{$m}:00<br>$remark");
         }
         echo json_encode(['status' => 'success']);
         break;
