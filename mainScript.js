@@ -550,7 +550,7 @@ function renderHistoryList(logs) {
                 const isAdd = data.method === 'add';
                 const sign = isAdd ? '+' : '-';
                 const colorClass = isAdd ? 'inline-time-red' : 'inline-time-green';
-                const label = log.action_type === 'modify_used' ? '已用' : '池';
+                // const label = log.action_type === 'modify_used' ? '已用' : '池';
                 inlineTimeHtml = `<span class="inline-time-tag ${colorClass}">${sign}${data.amount}</span>`;
                 
             } catch (e) { 
