@@ -138,9 +138,16 @@ function renderProjects() {
 
         // 创建卡片容器
         const card = document.createElement('div');
-        // 如果是精简模式，添加 compact 类
-        card.className = `card ${currentView === 'recycle' ? 'deleted' : ''} ${isCompactMode ? 'compact' : ''}`;
-        card.setAttribute('data-id', p.id); 
+        
+        // 【核心修改】判断是否需要添加 'paused' 类
+        // 条件：在“我的项目”视图下 且 项目未运行 (is_running == 0)
+        const isPaused = (currentView === 'active' && p.is_running == 0);
+
+        // 拼接类名：
+        // 1. deleted: 回收站样式  // 2. compact: 精简模式样式  // 3. paused: 新增的暂停滤镜样式
+        card.className = `card ${currentView === 'recycle' ? 'deleted' : ''} ${isCompactMode ? 'compact' : ''} ${isPaused ? 'paused' : ''}`;
+        
+        card.setAttribute('data-id', p.id);
 
        // --- 新增：准备右上角状态 HTML (包含 Running 和 计时器) ---
        let statusHtml = '';

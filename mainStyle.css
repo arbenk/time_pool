@@ -321,6 +321,19 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
 .inline-time-red { color: var(--accent-red); }
 .inline-time-green { color: var(--accent-green); }
 
+/* --- 新增：暂停状态卡片样式 --- */
+.card.paused {
+    /* 变成 80% 灰色，亮度稍微降低，透明度微调 */
+    /* filter: grayscale(0.9) brightness(0.7) opacity(1); */
+        filter: grayscale(0.5) brightness(0.5) opacity(1);
+    /* 添加过渡动画，切换状态时更平滑 */
+    transition: filter 0.1s ease, transform 0.1s;
+}
+
+/* 鼠标悬停时稍微恢复一点色彩（可选，增加交互感） */
+.card.paused:hover {
+    filter: grayscale(0.5) brightness(0.8) opacity(1);
+}
 
 /* --- 响应式布局：手机端 (宽度小于 600px) --- */
 @media (max-width: 600px) {
