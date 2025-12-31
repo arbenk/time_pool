@@ -2,7 +2,7 @@
 if (file_exists(__DIR__ . '/config_local.php')) {
     require_once __DIR__ . '/config_local.php';
 } else {
-    // 无本地配置时，仅提示，不中断程序（云端环境友好）
+        // 无本地配置时，仅提示，不中断程序（云端环境友好）
     exit('【提示】请复制 config_local.php.example 并重命名为 config_local.php，填写真实服务器账号密码！');
 }
 // 1. 设置时区
@@ -37,7 +37,7 @@ function addLog($pdo, $projectId, $type, $msg) {
     $snapUsed = $project ? $project['used_time'] : 0;
     $snapPool = $project ? $project['time_pool'] : 0;
 
-    // 2. 插入日志
+        // 2. 插入日志
     $stmt = $pdo->prepare("INSERT INTO project_logs (project_id, action_type, message, snapshot_used, snapshot_pool) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([$projectId, $type, $msg, $snapUsed, $snapPool]);
 }
@@ -56,16 +56,16 @@ switch ($action) {
     // --- 新增：更新排序 ---
     case 'update_order':
             // 前端传过来一个 id 数组，顺序就是新的顺序
-            $order = $_POST['order']; 
-            if (is_array($order)) {
-                foreach ($order as $index => $id) {
+        $order = $_POST['order']; 
+        if (is_array($order)) {
+            foreach ($order as $index => $id) {
                     // index 就是新的排序序号
-                    $stmt = $pdo->prepare("UPDATE projects SET sort_order = ? WHERE id = ?");
-                    $stmt->execute([$index, $id]);
-                }
+                $stmt = $pdo->prepare("UPDATE projects SET sort_order = ? WHERE id = ?");
+                $stmt->execute([$index, $id]);
             }
-            echo json_encode(['status' => 'success']);
-            break;
+        }
+        echo json_encode(['status' => 'success']);
+        break;
     case 'create_project':
         $name = $_POST['name'];
         $desc = $_POST['description'];
@@ -128,22 +128,39 @@ switch ($action) {
         $remark = $_POST['remark'];
         $seconds = ($h * 3600) + ($m * 60);
         
+        // 生成格式化时间字符串
+        $amountStr = sprintf("%02d:%02d:00", $h, $m);
+        
         if ($target === 'used') {
             $stmt = $pdo->prepare("SELECT used_time FROM projects WHERE id = ?");
             $stmt->execute([$id]);
             $curr = $stmt->fetch()['used_time'];
             $newVal = ($method === 'add') ? $curr + $seconds : max(0, $curr - $seconds);
             $pdo->prepare("UPDATE projects SET used_time = ? WHERE id = ?")->execute([$newVal, $id]);
-            $actionMsg = ($method === 'add') ? "+" : "-";
-            addLog($pdo, $id, 'modify_used', "已用{$actionMsg}{$h}:{$m}:00<br>$remark");
+            
+            // 保存为 JSON
+            $logData = [
+                'target' => 'used',
+                'method' => $method,
+                'amount' => $amountStr,
+                'remark' => $remark
+            ];
+            addLog($pdo, $id, 'modify_used', json_encode($logData));
         } else {
             $stmt = $pdo->prepare("SELECT time_pool FROM projects WHERE id = ?");
             $stmt->execute([$id]);
             $curr = $stmt->fetch()['time_pool'];
             $newVal = ($method === 'add') ? $curr + $seconds : max(0, $curr - $seconds);
             $pdo->prepare("UPDATE projects SET time_pool = ? WHERE id = ?")->execute([$newVal, $id]);
-            $actionMsg = ($method === 'add') ? "+" : "-";
-            addLog($pdo, $id, 'modify_pool', "时间池{$actionMsg}{$h}:{$m}:00<br>$remark");
+            
+            // 保存为 JSON
+            $logData = [
+                'target' => 'pool',
+                'method' => $method,
+                'amount' => $amountStr,
+                'remark' => $remark
+            ];
+            addLog($pdo, $id, 'modify_pool', json_encode($logData));
         }
         echo json_encode(['status' => 'success']);
         break;

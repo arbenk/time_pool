@@ -199,14 +199,7 @@ h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(90deg, #a5b4fc, #
 
 /* 右侧详情容器 (新布局) */
 .history-details {
-    /* display: flex;
-    flex-direction: row; 
-    gap: 15px;
-    align-items: flex-start; 
-    background: rgba(0,0,0,0.05);
-    padding: 10px 12px;
-    border-radius: 6px; */
-        display: flex;
+    display: flex;
     flex-direction: row; /* 电脑端默认左右排布 */
     gap: 15px;
     align-items: flex-start; /* 靠上对齐 */
@@ -310,19 +303,41 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
     text-shadow: 0 0 10px rgba(16, 185, 129, 0.2); /* 加一点发光效果 */
 }
 
+/* --- 历史记录行内彩色时间样式 --- */
+.history-top-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px; /* 图标、标题、时间之间的间距 */
+    margin-bottom: 4px;
+}
+
+.history-action { 
+    margin: 0 !important; /* 清除默认间距 */
+}
+
+
+.inline-time-blue { color: var(--accent-blue); }
+.inline-time-red { color: var(--accent-red); }
+.inline-time-green { color: var(--accent-green); }
+
+
 /* --- 响应式布局：手机端 (宽度小于 600px) --- */
 @media (max-width: 600px) {
     .history-item {
-        flex-direction: row; /* 整个条目改为上下排列 */
+        flex-direction: row; 
         align-items: flex-start;
     }
-
+    .view-tabs{
+    display: flex;
+    justify-content: space-between;
+    }
     .history-main {
-        max-width: 100% !important; /* 强制占满宽度 */
-        /* border-bottom: 1px solid var(--border-color); */
-        padding-bottom: 10px;
-        margin-bottom: 5px;
-        padding-right: 5px;
+        max-width: 100% !important; 
+        padding-right: 10px;
+        min-height: 86px;
+        display: grid;
+        align-content: space-around;
     }
 
     .history-details {
