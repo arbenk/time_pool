@@ -315,6 +315,8 @@ body.dark-mode .history-details { background: rgba(255,255,255,0.05); }
 }
 
 .history-action { 
+    white-space: pre-wrap; /* 允许换行 */
+    word-break: break-word;
     margin: 0 !important; /* 清除默认间距 */
 }
 
