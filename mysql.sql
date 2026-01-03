@@ -98,3 +98,12 @@ ALTER TABLE `projects` ADD COLUMN `sort_order` INT(11) DEFAULT 0;
 -- 2. (可选) 初始化现有数据的排序，让它们按 ID 顺序排列
 SET @rownum=0;
 UPDATE projects SET sort_order = (@rownum:=@rownum+1) ORDER BY id DESC;
+-- 创建一个简单的键值对表用于存储系统设置
+CREATE TABLE `system_settings` (
+  `key_name` varchar(50) NOT NULL,
+  `key_value` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`key_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 插入初始记录，默认时间设为很久以前，确保第一次访问就会备份
+INSERT INTO `system_settings` (`key_name`, `key_value`) VALUES ('last_backup', '2000-01-01 00:00:00');

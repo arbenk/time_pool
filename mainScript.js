@@ -2,10 +2,10 @@
 let projectsData = [];
 let currentView = 'active'; 
 let currentAdjustMethod = 'add';
-// 【新增】读取精简模式状态
+// 读取精简模式状态
 let isCompactMode = localStorage.getItem('isCompactMode') === 'true';
 
-// 【新增】设置状态变量
+// 设置状态变量
 let isAutoTheme = localStorage.getItem('isAutoTheme') === 'true';
 let isDimmingEnabled = localStorage.getItem('isDimmingEnabled') !== 'false'; // 默认开启
 
@@ -15,7 +15,6 @@ let autoThemeInterval = null;
 document.addEventListener('DOMContentLoaded', () => {
     // 1. 初始化主题
     const savedTheme = localStorage.getItem('theme');
-    // 如果开启了自动主题，将在 initAutoTheme 中覆盖
     if (savedTheme === 'light') {
         document.body.classList.remove('dark-mode');
     } else {
@@ -23,8 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 2. 初始化设置状态到 UI
-    document.getElementById('settingAutoTheme').checked = isAutoTheme;
-    document.getElementById('settingDimming').checked = isDimmingEnabled;
+    const settingAutoTheme = document.getElementById('settingAutoTheme');
+    const settingDimming = document.getElementById('settingDimming');
+    if (settingAutoTheme) settingAutoTheme.checked = isAutoTheme;
+    if (settingDimming) settingDimming.checked = isDimmingEnabled;
     
     updateCompactButtonText();
 
@@ -40,8 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProjects();
     setInterval(updateDisplayTimes, 1000);
 
-    // ... (SortableJS 初始化代码保持不变，请保留) ...
+    // 6. 初始化拖拽排序 (SortableJS)
     const grid = document.getElementById('projectGrid');
+    if (typeof Sortable !== 'undefined' && grid) {
         new Sortable(grid, {
             animation: 150,
             delay: 300,
@@ -63,57 +65,89 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveOrder(newOrder);
             }
         });
+    }
+
+    // 7. 【关键】静默调用备份插件
+    triggerBackupPlugin();
 });
 
-// --- 【新增】主题按钮的长按/点击处理 ---
+// --- 功能函数区 ---
+
+// 备份插件调用函数
+function triggerBackupPlugin() {
+    // 找到或创建底部小字容器
+    let footer = document.getElementById('footerBackupInfo');
+    if (!footer) {
+        // 如果 HTML 里没写，JS 自动创建一个
+        footer = document.createElement('div');
+        footer.id = 'footerBackupInfo';
+        footer.style.cssText = "text-align: center; color: var(--secondary-text); font-size: 0.75rem; margin-top: 30px; opacity: 0.6; padding-bottom: 20px;";
+        document.getElementById('view-main').appendChild(footer); 
+    }
+    
+    footer.innerText = '🛡️ 数据安全检查中...';
+
+    // 异步请求，不阻塞页面
+    fetch('back_up.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                footer.innerText = `🛡️ 上次备份: ${data.last_backup}`;
+                if (data.triggered) {
+                    // 如果刚刚触发了备份，提示一下
+                    const toast = document.createElement('div');
+                    toast.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: var(--accent-green); color: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 9999; font-size: 0.9rem;";
+                    toast.innerText = "✅ 系统已自动完成月度数据库备份并发送邮件";
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 5000);
+                }
+            } else {
+                footer.innerText = `⚠️ 备份服务: ${data.msg || '未知错误'}`;
+            }
+        })
+        .catch(err => {
+            console.warn('备份插件连接失败', err);
+            footer.innerText = '⚠️ 无法连接备份服务';
+        });
+}
+
+// 主题按钮的长按/点击处理
 function initThemeButton() {
     const btn = document.getElementById('btnTheme');
+    if (!btn) return;
+    
     let pressTimer;
     let isLongPress = false;
 
     const startPress = (e) => {
-        // e.preventDefault(); // 暂时注释，避免影响点击
         isLongPress = false;
         pressTimer = setTimeout(() => {
             isLongPress = true;
-            // 触发长按：打开设置弹窗
             document.getElementById('settingsModal').style.display = 'flex';
-        }, 600); // 600ms 长按阈值
+        }, 600); 
     };
 
     const endPress = (e) => {
         clearTimeout(pressTimer);
         if (!isLongPress) {
-            // 如果不是长按，则是点击：切换主题
-            // 注意：如果开启了自动主题，手动切换将暂时覆盖，但在下次自动检测时可能会变回
             toggleTheme();
         }
     };
 
-    // 鼠标事件
     btn.addEventListener('mousedown', startPress);
     btn.addEventListener('mouseup', endPress);
     btn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-
-    // 触摸事件 (手机端)
     btn.addEventListener('touchstart', (e) => { 
-        // 阻止默认行为可能会阻止点击，所以这里要注意
-        // e.preventDefault(); 
         startPress(e);
     });
     btn.addEventListener('touchend', endPress);
-    
-    // 防止长按弹出右键菜单
     btn.addEventListener('contextmenu', e => e.preventDefault());
 }
-
-// --- 【新增】设置功能函数 ---
 
 // 切换自动主题开关
 function toggleAutoTheme(checked) {
     isAutoTheme = checked;
     localStorage.setItem('isAutoTheme', isAutoTheme);
-    
     if (isAutoTheme) {
         initAutoTheme();
     } else {
@@ -125,29 +159,24 @@ function toggleAutoTheme(checked) {
 function toggleDimming(checked) {
     isDimmingEnabled = checked;
     localStorage.setItem('isDimmingEnabled', isDimmingEnabled);
-    renderProjects(); // 重新渲染以应用样式
+    renderProjects(); 
 }
 
-// 初始化自动主题 (获取经纬度 -> 计算日出日落)
+// 初始化自动主题
 function initAutoTheme() {
-    // 立即执行一次
     checkAutoTheme();
-    // 每分钟检查一次
     if (autoThemeInterval) clearInterval(autoThemeInterval);
     autoThemeInterval = setInterval(checkAutoTheme, 60000);
 }
 
 function checkAutoTheme() {
     if (!isAutoTheme) return;
-
-    // 尝试获取地理位置
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
             const lat = position.coords.latitude;
             const long = position.coords.longitude;
             applyThemeByLocation(lat, long);
         }, (error) => {
-            console.log("无法获取位置，使用默认时间 (6:00 - 18:00) 切换主题");
             applyThemeByTime();
         });
     } else {
@@ -155,23 +184,16 @@ function checkAutoTheme() {
     }
 }
 
-// 简易算法：根据时间切换 (fallback)
 function applyThemeByTime() {
     const hour = new Date().getHours();
     const isDay = hour >= 6 && hour < 18;
-    setTheme(!isDay); // 白天 -> light (非dark), 晚上 -> dark
+    setTheme(!isDay); 
 }
 
-// 简易算法：根据经纬度计算日出日落 (简化版)
 function applyThemeByLocation(lat, lng) {
-    // 这里使用一个简单的近似计算，或者直接请求 API
-    // 为了不依赖外部 API，这里使用 SunCalc 的简化逻辑
     const now = new Date();
-    // 此处省略复杂的 SunCalc 算法，使用本地时间修正
-    // 简单起见，我们依然使用时间，但可以根据经度稍微调整“正午”偏移
-    // 真正的晨昏线计算代码量较大，这里用时间兜底：
     const hour = now.getHours();
-    const isDay = hour >= 6 && hour < 18; // 实际项目中建议引入 SunCalc 库
+    const isDay = hour >= 6 && hour < 18; 
     setTheme(!isDay);
 }
 
@@ -185,7 +207,6 @@ function setTheme(isDark) {
     }
 }
 
-// 切换主题并保存 (手动)
 function toggleTheme() {
     const isDark = document.body.classList.toggle('dark-mode');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
@@ -195,7 +216,7 @@ function toggleViewMode() {
     isCompactMode = !isCompactMode;
     localStorage.setItem('isCompactMode', isCompactMode);
     updateCompactButtonText();
-    renderProjects(); // 重新渲染列表
+    renderProjects(); 
 }
 
 function updateCompactButtonText() {
@@ -205,12 +226,9 @@ function updateCompactButtonText() {
     }
 }
 
-// --- 【新增】保存排序函数 ---
 async function saveOrder(orderList) {
     const formData = new FormData();
     formData.append('action', 'update_order');
-        // 将数组作为多个值传递，或 JSON 字符串。
-        // PHP 接收数组比较方便的方式是利用 name[] 格式，或者直接在前端多次 append
     orderList.forEach(id => {
         formData.append('order[]', id);
     });
@@ -236,7 +254,6 @@ async function fetchProjects() {
 }
 
 // 渲染卡片
-// --- 【核心修改】渲染卡片函数 ---
 function renderProjects() {
     const grid = document.getElementById('projectGrid');
     grid.innerHTML = '';
@@ -247,22 +264,18 @@ function renderProjects() {
     }
 
     projectsData.forEach(p => {
-        // 1. 计算时间数据
         let totalUsed = parseInt(p.used_time); 
-        // 新增：初始化本次运行时长
         let currentSessionTime = 0; 
         if (p.is_running == 1) {
             const nowUnix = Math.floor(Date.now() / 1000);
             const diff = nowUnix - parseInt(p.last_start_time);
-            const validDiff = diff > 0 ? diff : 0; // 修改：提取时长变量
+            const validDiff = diff > 0 ? diff : 0; 
             totalUsed += validDiff;
-            currentSessionTime = validDiff; // 新增：记录本次时长
+            currentSessionTime = validDiff; 
         }
         
         const pool = parseInt(p.time_pool);
         const remaining = pool - totalUsed;
-        
-        // 计算百分比和颜色
         const percentRaw = pool > 0 ? Math.round((totalUsed / pool) * 100) : null;
         const percentForWidth = percentRaw === null ? 0 : Math.min(100, Math.max(0, percentRaw));
         let barBackground = 'linear-gradient(90deg, #60a5fa, #10b981)'; 
@@ -270,25 +283,18 @@ function renderProjects() {
             barBackground = 'linear-gradient(90deg, #f97316, #ef4444)';
         }
 
-        // 创建卡片容器
         const card = document.createElement('div');
         
-        // 【核心修改】状态类逻辑
-        // 1. 基本状态：回收站 / 精简模式
-        // 2. 暂停变暗：如果是 active 视图 + 未运行 + 开启了变暗设置
         const isPaused = (currentView === 'active' && p.is_running == 0);
-        // 只有当 switch 开启时，才添加 dimmed 类 (配合 CSS 实现滤镜)
         const dimClass = (isPaused && isDimmingEnabled) ? 'paused dimmed' : '';
         
         card.className = `card ${currentView === 'recycle' ? 'deleted' : ''} ${isCompactMode ? 'compact' : ''} ${dimClass}`;
         card.setAttribute('data-id', p.id); 
 
-       // --- 新增：准备右上角状态 HTML (包含 Running 和 计时器) ---
        let statusHtml = '';
        if (currentView === 'recycle') {
            statusHtml = `<span class="status-badge" style="color:var(--secondary-text)">Deleted</span>`;
        } else if (p.is_running == 1) {
-           // 正在运行：显示 Running + 计时器
            statusHtml = `
                <div style="text-align: right;">
                    <div id="disp-session-${p.id}" class="session-timer">${formatTime(currentSessionTime)}</div>
@@ -296,14 +302,9 @@ function renderProjects() {
        } else {
            statusHtml = `<span class="status-badge" style="color:var(--accent-red)">Paused</span>`;
        }
-        // --- 分支：根据是否是精简模式，渲染不同的 HTML ---
         
         if (isCompactMode) {
-            // ======================
-            // 🅰️ 精简模式 HTML (高度变短，隐藏无关信息)
-            // ======================
-            
-            // 按钮逻辑 (精简版：只保留核心按钮)
+            // === 精简模式 ===
             let compactButtons = '';
             if (currentView === 'active') {
                 compactButtons = `
@@ -316,7 +317,6 @@ function renderProjects() {
                     <button class="btn btn-green btn-full Foldedbtn" onclick="openHistoryPage(${p.id}, '${p.name}')">历史</button>
                 `;
             } else {
-                // 回收站模式下，还是需要保留还原/删除
                 compactButtons = `
                     <button class="btn btn-purple btn-full" onclick="restoreProject(${p.id})">♻️ 还原</button>
                     <button class="btn btn-red btn-full" onclick="cleanProject(${p.id})">❌ 删除</button>
@@ -350,10 +350,7 @@ function renderProjects() {
                 </div>
             `;
         } else {
-            // ======================
-            // 🅱️ 完整模式 HTML (保持原有代码不变)
-            // ======================
-            
+            // === 完整模式 ===
             let actionButtons = '';
             if (currentView === 'active') {
                 actionButtons = `
@@ -431,16 +428,16 @@ function updateDisplayTimes() {
             const remainEl = document.getElementById(`disp-remain-${p.id}`);
             const percentEl = document.getElementById(`disp-percent-${p.id}`);
             const barEl = document.getElementById(`disp-bar-${p.id}`);
-            const sessionEl = document.getElementById(`disp-session-${p.id}`); // 新增：获取计时器元素
+            const sessionEl = document.getElementById(`disp-session-${p.id}`); 
 
             if (usedEl && remainEl) {
                 const baseUsed = parseInt(p.used_time);
                 const startTime = parseInt(p.last_start_time);
-                const currentDiff = Math.max(0, nowUnix - startTime); // 这是本次运行时长
+                const currentDiff = Math.max(0, nowUnix - startTime); 
                 const totalUsed = baseUsed + currentDiff;
                 const pool = parseInt(p.time_pool);
                 const remaining = pool - totalUsed;
-                // 新增：更新右上角本次计时器
+                
                 if (sessionEl) {
                     sessionEl.innerText = formatTime(currentDiff);
                 }
@@ -472,17 +469,15 @@ function updateDisplayTimes() {
     });
 }
 
-// --- Actions ---
+// --- Action Functions ---
 
 function toggleTimer(id, isRunning) {
     if (isRunning == 1) {
-        // 正在运行 -> 停止 (弹窗)
         document.getElementById('stopProjectId').value = id;
         document.getElementById('stopRemarkInput').value = ''; 
         document.getElementById('stopModal').style.display = 'flex';
         setTimeout(() => document.getElementById('stopRemarkInput').focus(), 100);
     } else {
-        // 停止 -> 开始 (直接请求)
         executeTimerRequest(id, 'start', null);
     }
 }
@@ -546,8 +541,6 @@ async function cleanAllRecycle() {
     fetchProjects();
 }
 
-// --- SPA History Page Logic ---
-
 async function openHistoryPage(id, projectName) {
     document.getElementById('view-main').style.display = 'none';
     document.getElementById('view-history').style.display = 'block';
@@ -574,10 +567,6 @@ function backToMain() {
     document.getElementById('view-main').style.display = 'block';
 }
 
-// --- 渲染历史列表 (已更新：左右分栏布局) ---
-// --- 渲染历史列表 (已更新：响应式分栏布局) ---
-// --- 渲染历史列表 (样式重构：彩色行内时间 + 右侧精简) ---
-// --- 渲染历史列表 (已更新：智能日期格式化) ---
 function renderHistoryList(logs) {
     const container = document.getElementById('fullHistoryList');
     container.innerHTML = '';
@@ -593,9 +582,6 @@ function renderHistoryList(logs) {
         const div = document.createElement('div');
         div.className = 'history-item';
         
-        // --- 1. 准备数据模块 ---
-        // --- 1. 准备快照数据 (Snapshot - 右侧) ---
-        // A. Snapshot 数据 (剩余/已用/总池)
         const hasSnapshot = (log.snapshot_used !== null && log.snapshot_used !== undefined);
         let snapshotHtml = '';
         
@@ -624,55 +610,39 @@ function renderHistoryList(logs) {
             `;
         }
 
-        // B. Session 数据 (时长/结束/开始)
-        // --- 2. 解析消息 & 提取关键时间到左侧 ---
         let sessionHtml = ''; 
         let displayTitle = log.message;
         let icon = getLogIcon(log.action_type);
         let inlineTimeHtml = ''; 
         let dateDisplay = log.created_at; 
 
-        // 【场景 A：停止计时】
         if (log.action_type === 'stop') {
             try {
                 const data = JSON.parse(log.message);
                 displayTitle = data.remark ? data.remark : '完成计时';
-                
-                // 左侧显示蓝色时长
                 inlineTimeHtml = `<span class="inline-time-tag inline-time-blue">${data.duration}</span>`;
 
-                // --- 【核心修改】智能日期格式化 ---
                 if (data.start && data.end) {
-                    const startDatePart = data.start.split(' ')[0]; // 获取 "YYYY-MM-DD"
-                    const endDatePart = data.end.split(' ')[0];     // 获取 "YYYY-MM-DD"
+                    const startDatePart = data.start.split(' ')[0]; 
+                    const endDatePart = data.end.split(' ')[0];     
                     const startYear = startDatePart.substring(0, 4);
                     const endYear = endDatePart.substring(0, 4);
                     
                     let endTimeDisplay = '';
 
                     if (startDatePart === endDatePart) {
-                        // 1. 同一天：只显示时间 "HH:mm:ss"
                         endTimeDisplay = data.end.split(' ')[1];
                     } else if (startYear === endYear) {
-                        // 2. 同一年不同天：去掉年份，显示 "MM-DD HH:mm:ss"
                         endTimeDisplay = data.end.substring(5);
                     } else {
-                        // 3. 跨年：显示完整时间 "YYYY-MM-DD HH:mm:ss"
                         endTimeDisplay = data.end;
                     }
 
                     dateDisplay = `${data.start} <span style="margin:0 4px; opacity:0.5; font-size:0.8em;">to</span> ${endTimeDisplay}`;
                 }
-
-                // 右侧 sessionHtml 留空，因为信息已移至左侧
-                sessionHtml = ''; 
-
-            } catch (e) { /* 兼容旧文本数据 */ }
-        } 
-        // 【场景 B：修改时间】
-        else if (log.action_type === 'modify_used' || log.action_type === 'modify_pool') {
+            } catch (e) { }
+        } else if (log.action_type === 'modify_used' || log.action_type === 'modify_pool') {
             try {
-                // 尝试解析 JSON
                 const data = JSON.parse(log.message);
                 displayTitle = data.remark ? data.remark : (log.action_type === 'modify_used' ? '修改已用' : '修改时间池');
                 const isAdd = data.method === 'add';
@@ -683,7 +653,6 @@ function renderHistoryList(logs) {
 
                 inlineTimeHtml = `<span class="inline-time-tag ${colorClass}">${label}${sign}${data.amount}</span>`;
             } catch (e) { 
-                    // 兼容旧数据
                 if (log.message.includes('<br>')) {
                     const parts = log.message.split('<br>');
                     const timePart = parts[0]; 
@@ -695,14 +664,11 @@ function renderHistoryList(logs) {
             }
         }
 
-        // --- 3. 组装 ---
-        // C. 分割线 (只有两边都有数据时才显示)
         let dividerHtml = '';
         if (snapshotHtml && sessionHtml) {
             dividerHtml = `<div class="detail-divider"></div>`;
         }
 
-        // --- 2. 生成还原按钮 ---
         let restoreBtn = '';
         if (hasSnapshot && log.id != latestLogId && currentView === 'active') {
             restoreBtn = `
@@ -740,7 +706,6 @@ function renderHistoryList(logs) {
 
         div.innerHTML = leftContent + rightContent;
         
-            // 边框颜色逻辑
         if(log.action_type === 'stop') div.style.borderLeftColor = 'var(--accent-green)';
         else if(log.action_type === 'modify_pool') div.style.borderLeftColor = 'var(--accent-yellow)';
         else if(log.action_type === 'modify_used') div.style.borderLeftColor = 'var(--accent-yellow)';
@@ -751,7 +716,6 @@ function renderHistoryList(logs) {
         container.appendChild(div);
     });
 }
-
 
 async function rollbackLog(logId, projectId) {
     if (!confirm('⚠️ 警告：确定要“时光倒流”到这个节点吗？\n\n1. 项目时间将完全恢复到记录时的状态。\n2. 此节点之后的所有历史记录将被永久删除！\n3. 如果项目正在计时，将强制停止。')) {
@@ -785,8 +749,6 @@ async function clearHistoryFromPage() {
     const name = document.getElementById('historyPageTitle').innerText.replace('历史记录：', '');
     openHistoryPage(id, name);
 }
-
-    // --- Modals & Utils ---
 
 function openCreateModal() {
     document.getElementById('projectModalTitle').innerText = '添加项目';
